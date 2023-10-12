@@ -1,6 +1,6 @@
 # Hacker Fab Lab, Fall 2023
 # B. Joel Gonzalez
-# Sends G-code to SKR over USB
+# Sends G-code to gantry over USB
 
 # from os import waitid
 import time
@@ -13,9 +13,9 @@ old_y = 0
 old_z = 0
 
 TIME_PAUSE = 0
-
 BAUD_RATE = 115200
-SKR_port = None
+
+gantry_port = None
 
 def calcMoveTime(x, y, z):
     times = []
@@ -29,7 +29,7 @@ def calcMoveTime(x, y, z):
     return max(times) + TIME_PAUSE
 
 # homes the axes
-def home_SKR():
+def home_gantry():
     global old_x, old_y, old_z
 
     # set_stepper_motors("M502")
@@ -39,7 +39,7 @@ def home_SKR():
     start_time = time.time()
 
     set_stepper_motors("G92 X0 Y0 Z0", dont_wait_for_echo=True)
-    send_SKR_command(x_pos=15, y_pos=15, z_pos=15, dont_wait_for_echo=True)
+    send_gantry_command(x_pos=15, y_pos=15, z_pos=15, dont_wait_for_echo=True)
     print("Moved axes forward a bit before homing")
 
     command = "G28"
@@ -55,7 +55,7 @@ def home_SKR():
 
 # sets X/Y positions for gantry and Z position for end-effector
 # arguments are optional
-def send_SKR_command(x_pos = None, y_pos = None, z_pos = None, dont_wait_for_echo=False):
+def send_gantry_command(x_pos = None, y_pos = None, z_pos = None, dont_wait_for_echo=False):
     global old_x, old_y, old_z
 
     command = "G1"
@@ -87,7 +87,7 @@ def send_SKR_command(x_pos = None, y_pos = None, z_pos = None, dont_wait_for_ech
 # radius is 16mm for gate valves, 29mm for rotary valve
 # alpha is the initial angle, omega is the target angle (radians for both)
 # we move counterclockwise like a normal unit circle :)
-def send_SKR_command_arc(x_init, y_init, alpha, omega, radius, upwards, direction=None):
+def send_gantry_command_arc(x_init, y_init, alpha, omega, radius, upwards, direction=None):
     # G17 for XY plane, G18 for ZX plane
     if upwards:
         set_stepper_motors("G18")
@@ -132,34 +132,34 @@ def send_SKR_command_arc(x_init, y_init, alpha, omega, radius, upwards, directio
 
     return x_target, y_target
 
-# send to SKR
+# send command to gantry
 # you can just feed G-code commands to this function, if you want to test manual movement
 def set_stepper_motors(stepper_commands, wait_for_ok=False, dont_wait_for_echo=False):
     stepper_commands += '\n'
-    SKR_port.flush()
-    SKR_port.write(stepper_commands.encode())
+    GANTRY_PORT.flush()
+    GANTRY_PORT.write(stepper_commands.encode())
     if not dont_wait_for_echo:
         if wait_for_ok:
-            SKR_echo = ""
-            while("ok" not in SKR_echo):
-                SKR_echo = str(SKR_port.readline())
-                print(SKR_echo)
+            gantry_echo = ""
+            while("ok" not in gantry_echo):
+                gantry_echo = str(gantry_port.readline())
+                print(gantry_echo)
         else:
             # Just wait for the first thing we get back
-            SKR_echo = str(SKR_port.readline())
-            print(SKR_echo)
+            gantry_echo = str(gantry_port.readline())
+            print(gantry_echo)
 
-# assign SKR and MCU ports
+# assign gantry port
 def assign_ports():
-    global SKR_port
+    global gantry_port
     ports = list(serial.tools.list_ports.comports())
     # go thru open ports
     for p in ports:
         print(p)
 
         if "Mode" in p.description:
-            SKR_port = serial.Serial(p.device, BAUD_RATE)
-            print("SKR found!")
+            gantry_port = serial.Serial(p.device, BAUD_RATE)
+            print("Gantry connected!")
 
 if __name__ == '__main__':
     assign_ports()
