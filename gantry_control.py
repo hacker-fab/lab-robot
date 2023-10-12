@@ -1,4 +1,6 @@
-# sends new stepper motor positions to the SKR
+# Hacker Fab Lab, Fall 2023
+# B. Joel Gonzalez
+# Sends G-code to SKR over USB
 
 # from os import waitid
 import time
