@@ -151,19 +151,20 @@ def set_stepper_motors(stepper_commands, wait_for_ok=False, dont_wait_for_echo=F
 
 # assign gantry port
 def assign_ports():
-    global gantry_port
+    global GANTRY_PORT
     ports = list(serial.tools.list_ports.comports())
     # go thru open ports
     for p in ports:
         print(p)
 
-        if "Mode" in p.description:
-            gantry_port = serial.Serial(p.device, BAUD_RATE)
+        if "CH340" in p.description: # ender 5 S1 board
+            GANTRY_PORT = serial.Serial(p.device, BAUD_RATE)
             print("Gantry connected!")
 
 if __name__ == '__main__':
     assign_ports()
 
-    stepper_commands = input("Stepper Motor Commands:\n") # user input for testing/debugging
-    if stepper_commands != '':
-        set_stepper_motors(stepper_commands)
+    while 1:
+        stepper_commands = input("Stepper Motor Commands:\n") # user input for testing/debugging
+        if stepper_commands != '':
+            set_stepper_motors(stepper_commands, dont_wait_for_echo=True)
