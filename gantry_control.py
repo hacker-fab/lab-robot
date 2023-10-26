@@ -157,7 +157,9 @@ def assign_ports():
     for p in ports:
         print(p)
 
-        if "CH340" in p.description: # ender 5 S1 board
+        windows_port = "CH340" in p.description
+        linux_port = "USB Serial" in p.description
+        if windows_port or linux_port: # ender 5 S1 board - may need to be more specific if we have multiple USB devices connected
             GANTRY_PORT = serial.Serial(p.device, BAUD_RATE)
             print("Gantry connected!")
 
