@@ -39,12 +39,15 @@
 Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
 
-int pos = 11;    // variable to store the servo position
-int i = 1;
+int pos = 10;    // variable to store the servo position
+int i = 0;
 int j = 0;
 int sum = 0;
-int readingLen = 50;
-int readings[50];
+int readingLen = 30;
+int readings[30];
+bool failed = 0;    // Did claw grab a chip
+bool holding = 0;
+
 // Constants
 const int SENSOR_PIN = A0;  // Input pin for measuring Vout
 const int RS = 1;          // Shunt resistor value (in ohms)
@@ -58,44 +61,98 @@ void setup() {
   myservo.attach(9);  // attaches the servo on pin 9 to the servo object
   // Initialize serial monitor
   Serial.begin(9600);
-
 }
 
 void loop() {
-  j += 1;
-  //j is just main loop increment so we can sample faster than write.
-  //generate triangle wave and write to servo, 10 to 90 degrees
-    if (j % 5 == 0){
-      if (pos == 10){
-      i = 1;
-    }
-      if (pos == 90){
-      i = -1;
-    }
-    pos += i;
-    myservo.write(pos); // tell servo to go to position in variable 'pos'
-  }
-               
-  // Read a value from the INA169 board
-  sensorValue = analogRead(SENSOR_PIN);
-  readings[j%readingLen] = sensorValue; //update new reading in array
-  sum = sum + sensorValue; // update sum
-  sum = sum - readings[(j+1)%readingLen]; //remove value from 100 readings ago
-  
-  // Remap the ADC value into a voltage number (5V reference)
-  //sensorValue = (sensorValue * VOLTAGE_REF) / 1023;
+  pos = 10;
+  myservo.write(pos);
+  Serial.println("\nPlease enter: 0(OPEN) or 1(CLOSE)");
 
-  // Follow the equation given by the INA169 datasheet to
-  // determine the current flowing through RS. Assume RL = 10k
-  //Is = (Vout x 1k) / (RS x RL)
-  //current = sensorValue / (10 * RS);
-  
-  // Output value (in amps) to the serial monitor to 3 decimal
-  // places
-  Serial.println(sum);
-  
-  //Serial.println(" A");
 
-  // Delay program for a few milliseconds
-  delay(10);                      // waits 15 ms for the servo to reach the position
+  //Wait for user input, either 1 or 0
+  while (Serial.available() == 0) { 
   }
+  int input = Serial.read();
+  Serial.println(input);
+
+  //If its 0, open it
+  if(input == 48){
+    input = -1;
+    pos = 10;   //open up the servo
+    myservo.write(pos);
+  }
+  
+  //if its 1, close until current is over threshold, then hold while within holding numbers
+  else if(input == 49){
+    sum = 0;
+    for (i = 0; i < readingLen; ++i){
+      readings[i] = 0;
+    } 
+
+    input = -1;
+    pos = 10;   //open up the servo before closing
+    myservo.write(pos);
+
+    while (sum<1100){
+      holding = 1;
+      j += 1;
+      //j is just main loop increment so we can sample faster than write.
+      //generate triangle wave and write to servo, 10 to 90 degrees
+      if (j%5 == 0){
+        pos += 1;
+        myservo.write(pos); // tell servo to go to position in variable 'pos'
+      }
+      
+      //if closes all the way, not found
+      if (pos == 110){
+        Serial.println("NOT FOUND");
+        pos = 15;
+        myservo.write(pos);
+        failed = 1;
+        break;
+      }
+      // Read a value from the INA169 board
+      sensorValue = analogRead(SENSOR_PIN);
+      readings[j%readingLen] = sensorValue; //update new reading in array
+      sum = sum + sensorValue; // update sum
+      sum = sum - readings[(j+1)%readingLen]; //remove value from 100 readings ago
+    
+      Serial.println(sum);
+
+      // Delay program for a few milliseconds
+      delay(10);                      // waits 15 ms for the servo to reach the position
+    }
+    while (Serial.available() == 0) {
+      if(failed == 1){
+        failed = 0;
+        break;
+      }
+      
+      //if current dips below threshold, it lost hold
+      if(sum<700){
+        Serial.println("DROPPED");
+        pos = 10;   //open up the servo
+        myservo.write(pos);
+        break;
+      }
+
+      int input = Serial.read();
+
+      j += 1;
+      // Read a value from the INA169 board
+      sensorValue = analogRead(SENSOR_PIN);
+      readings[j%readingLen] = sensorValue; //update new reading in array
+      sum = sum + sensorValue; // update sum
+      sum = sum - readings[(j+1)%readingLen]; //remove value from 100 readings ago
+    
+      Serial.println(sum);
+
+      // Delay program for a few milliseconds
+      delay(10);                      // waits 15 ms for the servo to reach the position
+    }
+  }  
+  else{
+    Serial.println("Unrecognized Command");
+  }
+}
+ 
