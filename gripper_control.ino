@@ -39,7 +39,7 @@
 Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
 
-int pos = 10;    // variable to store the servo position
+int pos = 11;    // variable to store the servo position
 int i = 0;
 int j = 0;
 int sum = 0;
@@ -64,9 +64,13 @@ void setup() {
 }
 
 void loop() {
-  pos = 10;
-  myservo.write(pos);
-  Serial.println("\nPlease enter: 0(OPEN) or 1(CLOSE)");
+  while (pos>10){
+    pos += -1;
+    myservo.write(pos);
+    delay(20);
+  }
+  
+  Serial.println("\nPlease enter: 1 to open");
 
 
   //Wait for user input, either 1 or 0
@@ -93,18 +97,17 @@ void loop() {
     pos = 10;   //open up the servo before closing
     myservo.write(pos);
 
-    while (sum<1100){
-      holding = 1;
+    while (abs(sum)<800){
       j += 1;
       //j is just main loop increment so we can sample faster than write.
       //generate triangle wave and write to servo, 10 to 90 degrees
-      if (j%5 == 0){
+      if (j%10 == 0){
         pos += 1;
         myservo.write(pos); // tell servo to go to position in variable 'pos'
       }
       
       //if closes all the way, not found
-      if (pos == 110){
+      if (pos == 50){
         Serial.println("NOT FOUND");
         pos = 15;
         myservo.write(pos);
@@ -127,9 +130,22 @@ void loop() {
         failed = 0;
         break;
       }
-      
+      holding = 1;
+
+      if(j%10 == 0){
+        if(sum<200){
+          pos += 1;
+          myservo.write(pos);
+        }
+        else if(sum>700){
+          pos-=1;
+          myservo.write(pos);
+        }
+      }
+
       //if current dips below threshold, it lost hold
-      if(sum<700){
+      if(abs(sum)<100 || pos >= 67 || pos <= 7){
+        holding = 0;
         Serial.println("DROPPED");
         pos = 10;   //open up the servo
         myservo.write(pos);
